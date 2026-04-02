@@ -1,0 +1,59 @@
+#!/bin/sh
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)" || { echo "error: cannot resolve script directory" >&2; exit 1; }
+. "${SCRIPT_DIR}/getoptions-3.3.2/getoptions.sh"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+VERSION="0.1.0"
+
+parser_definition() {
+  setup REST help:usage abbr:true -- \
+    "Usage: inline [options] --target <file> --inline <file> --key <key>" ''
+  msg -- 'Replace any line containing \`# @inline <KEY>\` with the contents of <inline-file>.'
+  msg -- 'Outputs the modified script to stdout unless --overwrite is set.' ''
+  msg -- 'Options:'
+  param TARGET_FILE  -t --target  -- "Shell file to modify"
+  param INLINE_FILE  -i --inline  -- "Shell file whose contents replace the marker"
+  param INLINE_KEY   -k --key     -- "Key in the marker: # @inline <key>"
+  flag  OVERWRITE       --overwrite -- "Replace <output> in place instead of printing to stdout"
+  disp  :usage      -h --help    -- "Show this help"
+  disp  VERSION        --version -- "Show version"
+}
+
+case ${1:-} in --help|-h) eval "$(getoptions parser_definition)"; usage; exit 0 ;; esac
+
+eval "$(getoptions parser_definition) exit 1"
+eval "set -- $REST"
+
+[ -n "${TARGET_FILE:-}" ] || die "missing required option: --target"
+[ -n "${INLINE_FILE:-}" ] || die "missing required option: --inline"
+[ -n "${INLINE_KEY:-}"  ] || die "missing required option: --key"
+
+[ -f "$TARGET_FILE" ] || die "target file not found: $TARGET_FILE"
+[ -r "$TARGET_FILE" ] || die "target file not readable: $TARGET_FILE"
+[ -f "$INLINE_FILE" ] || die "inline file not found: $INLINE_FILE"
+[ -r "$INLINE_FILE" ] || die "inline file not readable: $INLINE_FILE"
+
+# Perform substitution: replace any line containing "# @inline KEY"
+# with the full contents of INLINE_FILE.
+do_inline() {
+  awk -v key="# @inline ${INLINE_KEY}" \
+      -v inline="${INLINE_FILE}" \
+  '
+    index($0, key) {
+      while ((getline line < inline) > 0) print line
+      close(inline)
+      next
+    }
+    { print }
+  ' "$TARGET_FILE"
+}
+
+if [ "${OVERWRITE:-}" = "1" ]; then
+  tmp="$(mktemp)" || die "failed to create temp file"
+  trap 'rm -f "$tmp"' EXIT INT TERM
+  do_inline > "$tmp" || die "inline substitution failed"
+  cp "$tmp" "$TARGET_FILE" || die "failed to overwrite $TARGET_FILE"
+else
+  do_inline || die "inline substitution failed"
+fi

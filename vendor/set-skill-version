@@ -1,0 +1,112 @@
+#!/bin/sh
+
+# Updates metadata.version in a SKILL.md frontmatter.
+# Extracts YAML frontmatter, mutates with yq, validates,
+# formats with prettier, and writes back atomically.
+
+# --- helpers ---
+
+die() { printf '%s\n' "error: $*" >&2; exit 1; }
+
+# --- usage ---
+
+usage() {
+	printf '%s\n' \
+		"Usage: set-skill-version <skill-file> <version>" \
+		"" \
+		"Updates the metadata.version field in a SKILL.md YAML frontmatter." \
+		"Extracts frontmatter, mutates with yq, validates, formats with" \
+		"prettier, and writes back atomically." \
+		"" \
+		"Options:" \
+		"  -h, --help    show this help"
+}
+
+# --- parse arguments ---
+
+case "${1:-}" in
+	-h|--help) usage; exit 0 ;;
+esac
+
+[ $# -ge 2 ] || { usage >&2; exit 2; }
+
+skill_file="$1"
+version="$2"
+
+[ -f "$skill_file" ] || die "file not found: $skill_file"
+[ -r "$skill_file" ] || die "file not readable: $skill_file"
+[ -n "$version" ] || die "version must not be empty"
+
+# --- check dependencies ---
+
+command -v yq >/dev/null || die "yq is required but not found (https://github.com/mikefarah/yq#install)"
+command -v npx >/dev/null || die "npx is required but not found (https://nodejs.org/)"
+
+# --- temp dir + cleanup ---
+
+TMPDIR=""
+
+cleanup() {
+	rc=$?
+	[ -n "$TMPDIR" ] && rm -rf "$TMPDIR"
+	exit "$rc"
+}
+trap cleanup EXIT
+
+TMPDIR="$(mktemp -d)" || die "failed to create temp dir"
+
+# --- extract frontmatter ---
+
+# SKILL.md format: --- \n yaml \n --- \n markdown body
+# Find the line numbers of the two --- delimiters
+delimiters="$(grep -n '^---$' "$skill_file")" || die "no YAML frontmatter found in $skill_file"
+first_line="$(printf '%s\n' "$delimiters" | head -1 | cut -d: -f1)"
+second_line="$(printf '%s\n' "$delimiters" | sed -n '2p' | cut -d: -f1)"
+
+[ -n "$first_line" ] || die "missing opening --- delimiter"
+[ -n "$second_line" ] || die "missing closing --- delimiter"
+[ "$first_line" -lt "$second_line" ] || die "frontmatter delimiters are malformed"
+
+# Extract just the YAML (between delimiters, exclusive)
+yaml_start=$((first_line + 1))
+yaml_end=$((second_line - 1))
+sed -n "${yaml_start},${yaml_end}p" "$skill_file" > "${TMPDIR}/frontmatter.yml" \
+	|| die "failed to extract frontmatter"
+
+# Extract the body (everything after closing ---)
+body_start=$((second_line + 1))
+total_lines="$(wc -l < "$skill_file")"
+if [ "$body_start" -le "$total_lines" ]; then
+	sed -n "${body_start},\$p" "$skill_file" > "${TMPDIR}/body.md" \
+		|| die "failed to extract body"
+else
+	: > "${TMPDIR}/body.md"
+fi
+
+# --- mutate version with yq ---
+
+yq -i ".metadata.version = \"${version}\"" "${TMPDIR}/frontmatter.yml" \
+	|| die "yq failed to set metadata.version"
+
+# --- validate yaml ---
+
+yq '.' "${TMPDIR}/frontmatter.yml" > /dev/null 2>&1 \
+	|| die "YAML validation failed after mutation"
+
+# --- format with prettier ---
+
+npx prettier --write "${TMPDIR}/frontmatter.yml" > /dev/null 2>&1 \
+	|| die "prettier formatting failed"
+
+# --- reassemble and atomic write ---
+
+{
+	printf '%s\n' "---"
+	cat "${TMPDIR}/frontmatter.yml"
+	printf '%s\n' "---"
+	cat "${TMPDIR}/body.md"
+} > "${TMPDIR}/skill.md" || die "failed to reassemble file"
+
+cp "${TMPDIR}/skill.md" "$skill_file" || die "failed to write back to $skill_file"
+
+printf '%s\n' "set-skill-version: $skill_file -> $version"
