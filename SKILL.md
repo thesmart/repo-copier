@@ -1,6 +1,12 @@
 ---
-name: copier
-description: "Use this skill when the user is working with the `copier` CLI tool specifically — generating a project from a copier template (`copier copy`), updating a copier-managed project (`copier update`), authoring a copier template (i.e. a Git repo with `copier.yml`), or configuring `copier.yml`. Also trigger for questions about `.copier-answers.yml`, `_tasks`, `_exclude`, or other copier-specific settings. Do NOT trigger for general Jinja2 templating, Flask/Django/Ansible templates, or other tools that happen to use Jinja."
+name: repo-copier
+description:
+  "Use this skill when the user is working with the `copier` CLI tool specifically — generating a
+  project from a copier template (`copier copy`), updating a copier-managed project (`copier
+  update`), authoring a copier template (i.e. a Git repo with `copier.yml`), or configuring
+  `copier.yml`. Also trigger for questions about `.copier-answers.yml`, `_tasks`, `_exclude`, or
+  other copier-specific settings. Do NOT trigger for general Jinja2 templating,
+  Flask/Django/Ansible templates, or other tools that happen to use Jinja."
 license: PolyForm Internal Use License 1.0.0
 compatibility: Designed for Claude Code (and compatible)
 metadata:
