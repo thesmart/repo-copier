@@ -1,0 +1,26 @@
+{
+  "skill_name": "copier",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I want to build a copier template for my Python microservices. It should ask for the service name, port number, and whether to enable Prometheus metrics. The service name should be kebab-case only. Show me the copier.yml and the answers file template I need.",
+      "expected_output": "A valid copier.yml with three questions (service_name with kebab-case validator, port as int, enable_prometheus as bool), plus the answers file template using _copier_conf.answers_file. Should explain file rendering rules and include the .jinja suffix convention.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 1,
+      "prompt": "I ran `copier update` and now my project has conflict markers all over the place. The template changed `pyproject.toml` but I also had local edits there. What are my options for resolving this, and how do I abort if I want to start over?",
+      "expected_output": "Explains the two main resolution approaches (manually editing conflict markers vs --conflict rej for .rej files), and the exact git commands to abort: `git reset && git checkout . && git clean -d -i`. Should mention that a clean git status is required before updating.",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 2,
+      "prompt": "My monorepo currently uses one copier template for the base project structure. I want to layer on a second template that manages just the CI/CD config (GitHub Actions). How do I apply both templates to the same directory and update them independently?",
+      "expected_output": "Explains using separate -a / --answers-file flags for each template (e.g. -a .copier-answers.main.yml and -a .copier-answers.ci.yml), setting _answers_file in each template's copier.yml, and how to update each independently with copier update -a <file>.",
+      "files": [],
+      "expectations": []
+    }
+  ]
+}

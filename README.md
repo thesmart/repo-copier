@@ -1,6 +1,6 @@
 # Copier Agent Skill
 
-![context: 0.0k tokens](https://img.shields.io/badge/context-0.0k_tokens-blue)
+![context: 11.5k tokens](https://img.shields.io/badge/context-11.5k_tokens-blue)
 
 A skill for creating, updating, and rendering project templates via
 [`copier`](https://copier.readthedocs.io/) CLI.
@@ -44,6 +44,23 @@ git clone https://github.com/thesmart/repo-copier.git ~/.claude/skills/repo-copi
 - [yq](https://github.com/mikefarah/yq#install) — used for YAML frontmatter updates in SKILL.md
 - [skill-creator](https://github.com/anthropics/skills) — skill creation, evaluation, and
   optimization
+
+---
+
+## Benchmark
+
+Evaluated on 3 tasks (template authoring, update conflict resolution, multi-template setup) against
+a baseline of Claude without the skill.
+
+| Metric    | With Skill  | Without Skill | Delta       |
+| --------- | ----------- | ------------- | ----------- |
+| Pass Rate | 100% ± 0%   | 72% ± 5%      | **+28 pts** |
+| Latency   | 45s ± 7s    | 59s ± 8s      | -14s        |
+| Tokens    | 2,875 ± 620 | 4,071 ± 668   | -1,196      |
+
+The skill improves accuracy by guiding Claude to copier-idiomatic patterns (e.g.
+`_copier_conf.answers_file`, `_copier_answers|to_nice_yaml`) that Claude otherwise misses or
+approximates incorrectly.
 
 ---
 
