@@ -5,7 +5,7 @@ license: PolyForm Internal Use License 1.0.0
 compatibility: Designed for Claude Code (and compatible)
 metadata:
   author: github.com/thesmart
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 Copier is a CLI tool for rendering project templates and keeping generated projects in sync with
